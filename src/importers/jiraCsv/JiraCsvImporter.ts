@@ -93,12 +93,14 @@ export class JiraCsvImporter implements Importer {
       const release = convertToLabel(row, 'Release');
       const creator = convertToLabel(row, 'Creator');
       const created = convertToLabel(row, 'Created');
+      const assignee = convertToLabel(row, 'Assignee');
       const issuekey = convertToLabel(row, 'Issue key');
       const issueid = convertToLabel(row, 'Issue id');
       const parentid = convertToLabel(row, 'Parent id');
       if (release) labels.push(release);
       if (creator) labels.push(creator);
       if (created) labels.push(created);
+      if (assignee) labels.push(assignee);
       if (issuekey) labels.push(issuekey);
       if (issueid) labels.push(issueid);
       if (parentid) labels.push(parentid);
@@ -155,6 +157,7 @@ export class JiraCsvImporter implements Importer {
       }
     }
 
+    //console.log(JSON.stringify(importData,undefined,2))
     return importData;
   };
 
