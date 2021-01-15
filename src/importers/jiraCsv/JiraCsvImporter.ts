@@ -1,4 +1,6 @@
+import { exit } from 'process';
 import { Importer, ImportResult } from '../../types';
+const fs = require('fs');
 const csv = require('csvtojson');
 const j2m = require('jira2md');
 
@@ -39,7 +41,10 @@ export class JiraCsvImporter implements Importer {
   }
 
   public import = async (): Promise<ImportResult> => {
-    const data = (await csv().fromFile(this.filePath)) as JiraIssueType[];
+    const { dedupedFilePath, dedupedHeaderMap } = getDedupedHeaders(
+      this.filePath
+    );
+    const data = (await csv().fromFile(dedupedFilePath)) as JiraIssueType[];
 
     const importData: ImportResult = {
       issues: [],
@@ -77,20 +82,59 @@ export class JiraCsvImporter implements Importer {
           : undefined;
       const priority = mapPriority(row['Priority']);
       const type = `Type: ${row['Issue Type']}`;
-      const release =
-        row['Release'] && row['Release'].length > 0
-          ? `Release: ${row['Release']}`
-          : undefined;
       const assigneeId =
         row['Assignee'] && row['Assignee'].length > 0
           ? row['Assignee']
           : undefined;
       const status = row['Status'];
 
+      // Convert to labels
       const labels = [type];
-      if (release) {
-        labels.push(release);
-      }
+      const release = convertToLabel(row, 'Release');
+      const creator = convertToLabel(row, 'Creator');
+      const created = convertToLabel(row, 'Created');
+      const issuekey = convertToLabel(row, 'Issue key');
+      const issueid = convertToLabel(row, 'Issue id');
+      const parentid = convertToLabel(row, 'Parent id');
+      if (release) labels.push(release);
+      if (creator) labels.push(creator);
+      if (created) labels.push(created);
+      if (issuekey) labels.push(issuekey);
+      if (issueid) labels.push(issueid);
+      if (parentid) labels.push(parentid);
+
+      dedupedHeaderMap.forEach(map => {
+        const key = map.deduped;
+        const originalKey = map.original;
+
+        switch (originalKey) {
+          case 'Labels': {
+            const l = getCell(row, key);
+            if (l) labels.push(l);
+            break;
+          }
+          case 'Outward issue link (Blocks)': {
+            const block = convertToLabel(row, key, `_jira_blocks_key: `);
+            if (block) labels.push(block);
+            break;
+          }
+          case 'Outward issue link (Relates)': {
+            const relation = convertToLabel(row, key, '_jira_related_key: ');
+            if (relation) labels.push(relation);
+            break;
+          }
+          case 'Outward issue link (Duplicate)': {
+            const duplicate = convertToLabel(row, key, '_jira_dupe_key: ');
+            if (duplicate) labels.push(duplicate);
+            break;
+          }
+          case 'Watchers': {
+            const watcher = convertToLabel(row, key, '_jira_watcher: ');
+            if (watcher && getCell(row, key) !== getCell(row, 'Creator'))
+              labels.push(watcher);
+          }
+        }
+      });
 
       importData.issues.push({
         title: row['Summary'],
@@ -130,4 +174,88 @@ const mapPriority = (input: JiraPriority): number => {
     Lowest: 0,
   };
   return priorityMap[input] || 0;
+};
+
+type dedupedHeadersType = {
+  deduped: string;
+  original: string;
+};
+type getDedupedHeadersType = {
+  dedupedFilePath: string;
+  dedupedHeaderMap: dedupedHeadersType[];
+};
+const getDedupedHeaders = (filePath: string): getDedupedHeadersType => {
+  const lines: string[] = fs
+    .readFileSync(filePath, { encoding: 'utf8' })
+    .toString()
+    .split('\n');
+  const originalHeaders: string[] = lines[0].split(',');
+  const processedHeaders: string[] = [];
+  const dedupedHeaders: dedupedHeadersType[] = originalHeaders.map(header => {
+    const isDupe =
+      originalHeaders.filter(originalHeader => originalHeader === header)
+        .length > 1;
+    if (isDupe) {
+      const index = processedHeaders.filter(
+        processedHeader => processedHeader === header
+      ).length;
+      processedHeaders.push(header);
+      return {
+        deduped: `${header}_${index}`,
+        original: header,
+      };
+    }
+    return {
+      deduped: header,
+      original: header,
+    };
+  });
+
+  let fd;
+  const filePathParts = filePath.split('.');
+  filePathParts.splice(1, 0, 'deduped');
+  const dedupedFilePath = filePathParts.join('.');
+  try {
+    fd = fs.openSync(
+      dedupedFilePath,
+      fs.constants.O_WRONLY |
+        fs.constants.O_CREAT |
+        fs.constants.O_TRUNC |
+        fs.constants.O_APPEND
+    );
+    fs.appendFileSync(
+      fd,
+      dedupedHeaders.map(obj => obj.deduped).join(',') + '\n'
+    );
+    for (let l = 1; l < lines.length; l++) {
+      fs.appendFileSync(dedupedFilePath, lines[l] + '\n');
+    }
+  } catch (e) {
+    console.error(e);
+    exit;
+  } finally {
+    fs.closeSync(fd);
+  }
+
+  return {
+    dedupedFilePath: dedupedFilePath,
+    dedupedHeaderMap: dedupedHeaders,
+  };
+};
+
+const convertToLabel = (row: any, colKey: string, overrideLabel?: string) => {
+  const val = getCell(row, colKey);
+  if (!val) return false;
+  const outLabel =
+    overrideLabel !== undefined
+      ? overrideLabel
+      : `_jira_${colKey
+          .split(' ')
+          .join('_')
+          .toLowerCase()}: `;
+  return `${outLabel}${val}`;
+};
+
+const getCell = (row: any, colKey: string) => {
+  return row[colKey] && row[colKey].length > 0 ? row[colKey] : false;
 };
