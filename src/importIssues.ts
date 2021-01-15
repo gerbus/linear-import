@@ -264,7 +264,7 @@ export const importIssues = async (apiKey: string, importer: Importer) => {
   const labelMapping = {} as { [id: string]: string };
   for (const labelId of Object.keys(importData.labels)) {
     const label = importData.labels[labelId];
-    const labelName = _.truncate(label.name.trim(), { length: 20 });
+    const labelName = _.truncate(label.name.trim(), { length: 40 });
     let actualLabelId = existingLabelMap[labelName.toLowerCase()];
 
     if (!actualLabelId) {
