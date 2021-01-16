@@ -37,15 +37,30 @@ Supported fields:
 
 Jira project can be imported into a Linear team from the CSV export file.
 
-Following fields are supported:
+The following fields are supported:
 
 - `Summary` - Issue title
 - `Description` - Converted into markdown and used as issue description
 - `URL` - URL of Jira issue
 - `Priority` - Issue priority
-- `Issue key` - Used to build backlink to original Jira issue
-- `Issue Type` - Added as a label
-- (Optional) `Release` - Added as a label
+- `Issue key` - Used to build backlink to original Jira issue, and included as a `_jira_issue_key: {jirakey}` label. The label is useful in case you lose access to Jira before re-establishing ticket relationships in Linear.
+- `Issue Type` - Added as a `Type: {jiratype}` label
+- (Optional) `Release` - Added as a `_jira_release: {releasename}` label
+- `Labels` - Added as `{Label}` labels
+- `Assignee` - Added as a `_jira_assignee: {username}` label
+- `Creator` - Added as a `_jira_creator: {username}` label
+- `Created` - Added as a `_jira_created: {datetime}` label
+- `Issue Id` (hidden) - Added as a `_jira_issue_id: {jiraid}` label _only for Sub-task type tickets_. The label is useful in case you lose access to Jira before re-establishing ticket relationships in Linear.
+- `Parent Id` (hidden) - Added as a `_jira_parent_id: {jiraid}` label. The label is useful for re-establishing parent-child links in Linear.
+- `Outward issue link (blocks)` - Added as a `_jira_blocks_key: {jirakey}` label
+- `Outward issue link (relates)` - Added as a `_jira_related_key: {jirakey}` label
+- `Outward issue link (duplicate)` - Added as a `_jira_dupe_key: {jirakey}` label
+- `Watchers` - Added as a `_jira_watcher_key: {username}` label _only when different from the ticket creator_
+
+#### After Import
+Filter All Issues in Linear by selecting all `_jira_assignee` labels. Go through the issues one-by-one and assign them, and remove the `_jira_assignee` label.
+
+If you want to maintain some ticket relationships, you can walk through the issues in Linear one-by-one. For example, in Linear, you can filter All Issues by checking boxes for all labels including `_jira_parent_key` (better than filtering by `Type: Sub-task` because this will show children of Epics too). Once filtered, you can go through issue-by-issue and create links to parents (you might have to open the original Jira ticket to get the parent ticket name), and then remove the `_jira_parent_key` label.
 
 ### Asana CSV
 
