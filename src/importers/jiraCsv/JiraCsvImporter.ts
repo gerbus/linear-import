@@ -102,7 +102,8 @@ export class JiraCsvImporter implements Importer {
       if (created) labels.push(created);
       if (assignee) labels.push(assignee);
       if (issuekey) labels.push(issuekey);
-      if (issueid) labels.push(issueid);
+      if (issueid && getCell(row, 'Issue Type') !== 'Sub-task')
+        labels.push(issueid); // only need issueid for parents of other issues
       if (parentid) labels.push(parentid);
 
       dedupedHeaderMap.forEach(map => {
