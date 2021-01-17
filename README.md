@@ -55,9 +55,10 @@ The following fields are supported:
 - `Outward issue link (blocks)` - Added as a `_jira_blocks_key: {jirakey}` label
 - `Outward issue link (relates)` - Added as a `_jira_related_key: {jirakey}` label
 - `Outward issue link (duplicate)` - Added as a `_jira_dupe_key: {jirakey}` label
-- `Watchers` - Added as a `_jira_watcher_key: {username}` label _only when different from the ticket creator_
+- `Watchers` - Added as a `_jira_watcher_key: {username}` label _only when different from both the ticket creator and assignee_
 
 #### After Import
+
 Filter All Issues in Linear by selecting all `_jira_assignee` labels. Go through the issues one-by-one and assign them, and remove the `_jira_assignee` label.
 
 If you want to maintain some ticket relationships, you can walk through the issues in Linear one-by-one. For example, in Linear, you can filter All Issues by checking boxes for all labels including `_jira_parent_key` (better than filtering by `Type: Sub-task` because this will show children of Epics too). Once filtered, you can go through issue-by-issue and create links to parents (you might have to open the original Jira ticket to get the parent ticket name), and then remove the `_jira_parent_key` label.

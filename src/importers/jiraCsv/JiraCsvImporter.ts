@@ -133,7 +133,11 @@ export class JiraCsvImporter implements Importer {
           }
           case 'Watchers': {
             const watcher = convertToLabel(row, key, '_jira_watcher: ');
-            if (watcher && getCell(row, key) !== getCell(row, 'Creator'))
+            if (
+              watcher &&
+              getCell(row, key) !== getCell(row, 'Creator') &&
+              getCell(row, key) !== getCell(row, 'Assignee')
+            )
               labels.push(watcher);
           }
         }
